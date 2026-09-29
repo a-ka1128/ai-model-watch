@@ -224,15 +224,17 @@ class Database:
             return list(
                 connection.execute(
                     """
-                    SELECT d.*, s.company, s.reliability_default, s.name AS source_name
-                    FROM documents d
-                    JOIN sources s ON s.id = d.source_id
-                    WHERE (? OR d.translated_content IS NULL OR d.translated_content = ''
-                           OR d.summary_ko IS NULL OR d.summary_ko = '')
-                      AND d.body_status = 'complete'
-                      AND (? = 0 OR d.curation_status = 'selected')
-                      AND (? IS NULL OR datetime(COALESCE(d.published_at, d.collected_at)) >= datetime(?))
-                    ORDER BY COALESCE(d.published_at, d.collected_at) DESC
+                    SELECT * FROM (
+                        SELECT d.*, s.company, s.reliability_default, s.name AS source_name,
+                               ROW_NUMBER() OVER (PARTITION BY d.source_id ORDER BY COALESCE(d.published_at, d.collected_at) DESC) AS source_rank
+                        FROM documents d
+                        JOIN sources s ON s.id = d.source_id
+                        WHERE (? OR d.translated_content IS NULL OR d.translated_content = ''
+                               OR d.summary_ko IS NULL OR d.summary_ko = '')
+                          AND d.body_status = 'complete'
+                          AND (? = 0 OR d.curation_status = 'selected')
+                          AND (? IS NULL OR datetime(COALESCE(d.published_at, d.collected_at)) >= datetime(?))
+                    ) ORDER BY source_rank, COALESCE(published_at, collected_at) DESC
                     LIMIT ?
                     """,
                     (int(force), int(curated_only), since, since, limit),
@@ -242,15 +244,17 @@ class Database:
     def list_documents_for_curation(self, limit: int = 100, since: str | None = None) -> list[sqlite3.Row]:
         with self.connect() as connection:
             return list(connection.execute("""
-                SELECT d.*, s.name AS source_name, s.source_type, s.reliability_default
-                FROM documents d JOIN sources s ON s.id = d.source_id
-                WHERE d.body_status = 'complete'
-                  AND (d.translated_content IS NULL OR d.translated_content = ''
-                       OR d.summary_ko IS NULL OR d.summary_ko = '')
-                  AND (d.curation_status IS NULL
-                       OR (d.curation_status = 'error' AND datetime(d.curated_at) < datetime('now', '-1 day')))
-                  AND (? IS NULL OR datetime(COALESCE(d.published_at, d.collected_at)) >= datetime(?))
-                ORDER BY COALESCE(d.published_at, d.collected_at) DESC
+                SELECT * FROM (
+                    SELECT d.*, s.name AS source_name, s.source_type, s.reliability_default,
+                           ROW_NUMBER() OVER (PARTITION BY d.source_id ORDER BY COALESCE(d.published_at, d.collected_at) DESC) AS source_rank
+                    FROM documents d JOIN sources s ON s.id = d.source_id
+                    WHERE d.body_status = 'complete'
+                      AND (d.translated_content IS NULL OR d.translated_content = ''
+                           OR d.summary_ko IS NULL OR d.summary_ko = '')
+                      AND (d.curation_status IS NULL
+                           OR (d.curation_status = 'error' AND datetime(d.curated_at) < datetime('now', '-1 day')))
+                      AND (? IS NULL OR datetime(COALESCE(d.published_at, d.collected_at)) >= datetime(?))
+                ) ORDER BY source_rank, COALESCE(published_at, collected_at) DESC
                 LIMIT ?
             """, (since, since, limit)).fetchall())
 

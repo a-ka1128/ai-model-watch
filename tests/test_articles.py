@@ -82,3 +82,24 @@ def test_recency_filter_skips_old_documents(tmp_path: Path):
     for doc in database.list_documents():
         database.update_document_curation(int(doc['id']), 'selected', 80, 'ok')
     assert titles(database.list_documents_for_translation(curated_only=True, since=settings.since)) == {'New', 'Undated'}
+
+
+def test_backlog_is_processed_round_robin_across_sources(tmp_path: Path):
+    from datetime import datetime, timedelta, timezone
+    database = Database(tmp_path / 'test.db')
+    database.initialize()
+    now = datetime.now(timezone.utc)
+    for name, count in (('Big', 6), ('Small', 2)):
+        database.upsert_source(Source(name, 'official', f'https://{name}.example', 1, name, True))
+        for i in range(count):
+            # Every Big document is newer than every Small one.
+            age = timedelta(hours=i) if name == 'Big' else timedelta(days=1, hours=i)
+            database.insert_document(Document(name, f'{name}{i}', f'https://{name}.example/{i}', f'{name} body {i}', published_at=now - age))
+    for doc in database.list_documents(100):
+        database.update_article_body(int(doc['id']), 'body')
+    sources = lambda rows: [row['source_name'] for row in rows]
+    assert sources(database.list_documents_for_curation(4)) == ['Big', 'Small', 'Big', 'Small']
+    for doc in database.list_documents(100):
+        database.update_document_curation(int(doc['id']), 'selected', 80, 'ok')
+    assert sources(database.list_documents_for_translation(4, curated_only=True)) == ['Big', 'Small', 'Big', 'Small']
+    assert database.list_documents_for_translation(1, curated_only=True)[0]['title'] == 'Big0'
