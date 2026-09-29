@@ -1,0 +1,28 @@
+﻿# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Frontend
+frontend/node_modules/
+frontend/.next/
+*.tsbuildinfo
+
+# Secrets (keep the template)
+.env
+.env.*
+!.env.example
+
+# Runtime data
+data/*.db
+data/*.db-*
+data/reports/
+data/logs/
+*.log
+uv-cache/
+
+# PyInstaller output (the .spec file stays tracked)
+build/
+dist/
