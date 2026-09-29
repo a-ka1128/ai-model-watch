@@ -219,7 +219,7 @@ class Database:
                 (document_id,),
             ).fetchone()
 
-    def list_documents_for_translation(self, limit: int = 100, force: bool = False, curated_only: bool = False) -> list[sqlite3.Row]:
+    def list_documents_for_translation(self, limit: int = 100, force: bool = False, curated_only: bool = False, since: str | None = None) -> list[sqlite3.Row]:
         with self.connect() as connection:
             return list(
                 connection.execute(
@@ -231,14 +231,15 @@ class Database:
                            OR d.summary_ko IS NULL OR d.summary_ko = '')
                       AND d.body_status = 'complete'
                       AND (? = 0 OR d.curation_status = 'selected')
+                      AND (? IS NULL OR datetime(COALESCE(d.published_at, d.collected_at)) >= datetime(?))
                     ORDER BY COALESCE(d.published_at, d.collected_at) DESC
                     LIMIT ?
                     """,
-                    (int(force), int(curated_only), limit),
+                    (int(force), int(curated_only), since, since, limit),
                 ).fetchall()
             )
 
-    def list_documents_for_curation(self, limit: int = 100) -> list[sqlite3.Row]:
+    def list_documents_for_curation(self, limit: int = 100, since: str | None = None) -> list[sqlite3.Row]:
         with self.connect() as connection:
             return list(connection.execute("""
                 SELECT d.*, s.name AS source_name, s.source_type, s.reliability_default
@@ -248,9 +249,10 @@ class Database:
                        OR d.summary_ko IS NULL OR d.summary_ko = '')
                   AND (d.curation_status IS NULL
                        OR (d.curation_status = 'error' AND datetime(d.curated_at) < datetime('now', '-1 day')))
+                  AND (? IS NULL OR datetime(COALESCE(d.published_at, d.collected_at)) >= datetime(?))
                 ORDER BY COALESCE(d.published_at, d.collected_at) DESC
                 LIMIT ?
-            """, (limit,)).fetchall())
+            """, (since, since, limit)).fetchall())
 
     def update_document_curation(self, document_id: int, status: str, score: int | None, reason: str) -> None:
         if status not in {'selected', 'rejected', 'error'}:
@@ -261,7 +263,7 @@ class Database:
                 WHERE id = ?
             """, (status, score, reason, datetime.now(timezone.utc).isoformat(), document_id))
 
-    def list_body_candidates(self, limit: int = 100) -> list[sqlite3.Row]:
+    def list_body_candidates(self, limit: int = 100, since: str | None = None) -> list[sqlite3.Row]:
         with self.connect() as connection:
             return list(connection.execute("""
                 SELECT * FROM (
@@ -271,10 +273,11 @@ class Database:
                                ORDER BY COALESCE(d.published_at, d.collected_at) DESC
                            ) AS source_rank
                     FROM documents d JOIN sources s ON s.id = d.source_id
-                    WHERE d.body_status IS NULL OR
-                          (d.body_status = 'failed' AND datetime(d.body_fetched_at) < datetime('now', '-1 day'))
+                    WHERE (d.body_status IS NULL OR
+                          (d.body_status = 'failed' AND datetime(d.body_fetched_at) < datetime('now', '-1 day')))
+                    AND (? IS NULL OR datetime(COALESCE(d.published_at, d.collected_at)) >= datetime(?))
                 ) ORDER BY source_rank, COALESCE(published_at, collected_at) DESC LIMIT ?
-            """, (limit,)).fetchall())
+            """, (since, since, limit)).fetchall())
 
     def update_article_body(self, document_id: int, content: str | None, error: str | None = None) -> None:
         with self.connect() as connection:

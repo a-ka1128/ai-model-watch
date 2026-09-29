@@ -18,9 +18,9 @@ class CurationSummary:
     failed: int
 
 
-def curate_documents(database: Database, curator: ArticleCurator, limit: int = 100) -> CurationSummary:
+def curate_documents(database: Database, curator: ArticleCurator, limit: int = 100, since: str | None = None) -> CurationSummary:
     processed = selected = rejected = failed = 0
-    for document in database.list_documents_for_curation(limit):
+    for document in database.list_documents_for_curation(limit, since):
         processed += 1
         document_id = int(document['id'])
         try:

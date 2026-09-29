@@ -109,9 +109,9 @@ def translate(settings: Settings, limit: int, force: bool = False) -> None:
         bodies = collect_article_bodies(database, settings, limit)
         print(f'Bodies collected={bodies.collected} failed={bodies.failed}', flush=True)
     translator = OpenAICompatibleProvider(settings.llm_endpoint, settings.translation_model or settings.llm_model, max(180, settings.request_timeout_seconds))
-    curation = curate_documents(database, translator, limit)
+    curation = curate_documents(database, translator, limit, settings.since)
     print(f'Quality reviewed={curation.processed} selected={curation.selected} excluded={curation.rejected} failed={curation.failed}', flush=True)
-    summary = translate_documents(database, translator, limit, force, require_curated=True)
+    summary = translate_documents(database, translator, limit, force, require_curated=True, since=settings.since)
     print(f"Translation processed={summary.processed} translated={summary.translated} failed={summary.failed}")
 
 

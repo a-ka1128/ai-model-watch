@@ -61,3 +61,24 @@ def test_updated_feed_body_does_not_duplicate_the_same_post(tmp_path: Path):
 def test_claude_brand_is_not_translated_as_cloud():
     assert preserve_product_names('Are we praising Claude?', '클라우드를 칭찬하는가?') == 'Claude를 칭찬하는가?'
     assert preserve_product_names('Claude uses cloud services', '클라우드 서비스') == '클라우드 서비스'
+
+
+def test_recency_filter_skips_old_documents(tmp_path: Path):
+    from datetime import datetime, timedelta, timezone
+    database = Database(tmp_path / 'test.db')
+    database.initialize()
+    database.upsert_source(Source('Test', 'official', 'https://example.com', 1, 'Test', True))
+    now = datetime.now(timezone.utc)
+    database.insert_document(Document('Test', 'Old', 'https://example.com/old', 'old body', published_at=now - timedelta(weeks=10)))
+    database.insert_document(Document('Test', 'New', 'https://example.com/new', 'new body', published_at=now - timedelta(days=2)))
+    database.insert_document(Document('Test', 'Undated', 'https://example.com/undated', 'undated body'))
+    settings = Settings(tmp_path / 'test.db', max_age_weeks=4)
+    titles = lambda rows: {row['title'] for row in rows}
+    assert titles(database.list_body_candidates(since=settings.since)) == {'New', 'Undated'}
+    assert titles(database.list_body_candidates(since=Settings(tmp_path / 'x.db', max_age_weeks=0).since)) == {'Old', 'New', 'Undated'}
+    for doc in database.list_documents():
+        database.update_article_body(int(doc['id']), 'body')
+    assert titles(database.list_documents_for_curation(since=settings.since)) == {'New', 'Undated'}
+    for doc in database.list_documents():
+        database.update_document_curation(int(doc['id']), 'selected', 80, 'ok')
+    assert titles(database.list_documents_for_translation(curated_only=True, since=settings.since)) == {'New', 'Undated'}

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 
@@ -24,6 +25,13 @@ class Settings:
     translation_enabled: bool = False
     translation_limit: int = 100
     translation_model: str = ''
+    max_age_weeks: int = 4  # 0 disables the recency filter
+
+    @property
+    def since(self) -> str | None:
+        if self.max_age_weeks <= 0:
+            return None
+        return (datetime.now(timezone.utc) - timedelta(weeks=self.max_age_weeks)).isoformat()
 
     @classmethod
     def from_environment(cls) -> "Settings":
@@ -52,6 +60,7 @@ class Settings:
             translation_enabled=os.environ.get("AI_MODEL_WATCH_TRANSLATION", "false").lower() in {"1", "true", "yes", "on"},
             translation_limit=max(1, min(int(os.environ.get("AI_MODEL_WATCH_TRANSLATION_LIMIT", "100")), 500)),
             translation_model=os.environ.get('AI_MODEL_WATCH_TRANSLATION_MODEL', ''),
+            max_age_weeks=max(0, int(os.environ.get('AI_MODEL_WATCH_MAX_AGE_WEEKS', '4'))),
         )
 
 

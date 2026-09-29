@@ -14,11 +14,11 @@ class TranslationSummary:
     failed: int
 
 
-def translate_documents(database: Database, translator: Translator, limit: int = 100, force: bool = False, require_curated: bool = False) -> TranslationSummary:
+def translate_documents(database: Database, translator: Translator, limit: int = 100, force: bool = False, require_curated: bool = False, since: str | None = None) -> TranslationSummary:
     processed = 0
     translated = 0
     failed = 0
-    for document in database.list_documents_for_translation(limit, force, require_curated):
+    for document in database.list_documents_for_translation(limit, force, require_curated, since):
         processed += 1
         try:
             content = str(document['article_content'] or document['content'])

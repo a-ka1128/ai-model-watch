@@ -128,7 +128,7 @@ class BodySummary:
 def collect_article_bodies(database: Database, settings: Settings, limit: int = 100) -> BodySummary:
     collected = failed = 0
     blocked_sources: set[str] = set()
-    for document in database.list_body_candidates(limit):
+    for document in database.list_body_candidates(limit, settings.since):
         try:
             source_type = str(document['source_type'])
             feed_content = clean_feed_html(str(document['content']))
