@@ -100,7 +100,7 @@ tests/                Unit tests
 
 Set `AI_MODEL_WATCH_LLM=openai-compatible`, `AI_MODEL_WATCH_LLM_ENDPOINT`, and `AI_MODEL_WATCH_LLM_MODEL` to use an Ollama/llama.cpp/vLLM-compatible local endpoint. The default `heuristic` provider is deterministic and intended only for offline smoke tests; it labels claims as community-level evidence and does not create precision scores.
 
-`run_weekly.ps1` executes collection, analysis, clustering, and report generation as one repeatable job. `.github/workflows/weekly.yml` provides a Monday UTC schedule without uploading the database or report to an external artifact store.
+`run_weekly.ps1` executes collection, analysis, clustering, and report generation as one repeatable job. It is meant to run on the local machine (see Windows automatic startup below), since the database, local LLM and GPU live there. `.github/workflows/ci.yml` only runs the test suite on pushes and pull requests; the weekly pipeline is intentionally not run in GitHub Actions.
 
 ## Windows automatic startup
 
