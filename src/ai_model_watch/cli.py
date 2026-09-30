@@ -140,6 +140,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--limit", type=int, default=50)
     parser.add_argument("--provider", choices=("heuristic", "openai-compatible"))
+    parser.add_argument('--scope', choices=('all', 'official'), default='all', help='run-weekly: collect every source or only the official sites')
     parser.add_argument('--force', action='store_true', help='Re-translate stored article bodies with the current translation model')
     return parser
 
@@ -165,7 +166,7 @@ def main() -> None:
         summary = cluster_claims(database, args.limit)
         print(f"Claims={summary.claims_processed} clusters={summary.clusters_created} links={summary.links_created}")
     elif args.command == "run-weekly":
-        summary = run_weekly_pipeline(settings, args.limit)
+        summary = run_weekly_pipeline(settings, args.limit, args.scope)
         print(
             f"Official={summary.official_inserted} Reddit={summary.reddit_inserted} X={summary.x_inserted} "
             f"Documents={summary.analysis.processed} Claims={summary.analysis.claims_inserted} "

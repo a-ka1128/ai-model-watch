@@ -26,7 +26,10 @@ def translate_documents(database: Database, translator: Translator, limit: int =
                 title_ko = str(document['translated_title'])
                 content_ko = str(document['translated_content'])
             else:
-                result = translator.translate(str(document["title"]), content)
+                try:
+                    result = translator.translate(str(document["title"]), content)
+                except ValueError:  # validation rejections are often model variance; retry once
+                    result = translator.translate(str(document["title"]), content)
                 title_ko, content_ko = result.title_ko, result.content_ko
             if len(content) < 400:
                 brief = ArticleBrief(content_ko, (title_ko,), ())

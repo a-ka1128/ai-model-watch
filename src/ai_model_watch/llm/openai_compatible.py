@@ -37,7 +37,7 @@ QUALITY_SCHEMA = {
 def validate_korean_translation(original: str, translated: str) -> None:
     if re.search(r'[가-힣]+[a-zA-Z]{3,}', translated):
         raise ValueError('Translation contains a broken Korean/Latin word')
-    for script in (r'[\u0400-\u04ff]', r'[\u0600-\u06ff]'):
+    for script in (r'[\u0400-\u04ff]', r'[\u0600-\u06ff]', r'[\u3040-\u30ff]', r'[\u3400-\u4dbf\u4e00-\u9fff]'):
         if re.search(script, translated) and not re.search(script, original):
             raise ValueError('Translation introduced an unrelated writing system')
 

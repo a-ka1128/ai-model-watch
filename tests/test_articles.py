@@ -103,3 +103,22 @@ def test_backlog_is_processed_round_robin_across_sources(tmp_path: Path):
         database.update_document_curation(int(doc['id']), 'selected', 80, 'ok')
     assert sources(database.list_documents_for_translation(4, curated_only=True)) == ['Big', 'Small', 'Big', 'Small']
     assert database.list_documents_for_translation(1, curated_only=True)[0]['title'] == 'Big0'
+
+
+def test_translation_rejects_stray_han_characters():
+    import pytest
+    from ai_model_watch.llm.openai_compatible import validate_korean_translation
+    with pytest.raises(ValueError):
+        validate_korean_translation('Weekly report', '주간 報告')
+    validate_korean_translation('中文 source', '중국어 원문 中文')
+
+
+def test_official_scope_skips_reddit_sources(tmp_path: Path):
+    from ai_model_watch import pipeline
+    database = Database(tmp_path / 'test.db')
+    database.initialize()
+    seen = []
+    with patch.object(pipeline, 'collect_rss', side_effect=lambda source, settings: seen.append(source.name) or []), \
+         patch.object(pipeline, 'collect_html_index', side_effect=lambda source, settings: seen.append(source.name) or []):
+        pipeline._collect(database, Settings(tmp_path / 'test.db'), 'official')
+    assert seen and not any('Reddit' in name for name in seen)

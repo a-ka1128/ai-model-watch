@@ -8,6 +8,7 @@ $repo = Split-Path -Parent $MyInvocation.MyCommand.Path
 $backendScript = Join-Path $repo "start_backend.ps1"
 $frontendScript = Join-Path $repo "start_frontend.ps1"
 $weeklyScript = Join-Path $repo "run_weekly.ps1"
+$dailyScript = Join-Path $repo "run_daily.ps1"
 $panelScript = Join-Path $repo "start_control_panel.ps1"
 $hiddenLauncher = Join-Path $repo "run_hidden.vbs"
 $panelExe = Join-Path $repo "dist\AI_Model_Watch_Control_Panel.exe"
@@ -39,6 +40,7 @@ $settings = New-ScheduledTaskSettingsSet -Hidden -AllowStartIfOnBatteries -DontS
 $principal = New-ScheduledTaskPrincipal -UserId $userId -LogonType Interactive -RunLevel Limited
 $logon = New-ScheduledTaskTrigger -AtLogOn -User $userId
 $weekly = New-ScheduledTaskTrigger -Weekly -DaysOfWeek Monday -At 9:00AM
+$daily = New-ScheduledTaskTrigger -Daily -At 6:00AM
 
 function Register-AIModelWatchTask([string]$name, [string]$scriptPath, $trigger) {
     if ($name -eq "AI Model Watch - Frontend" -and $nodePath -and (Test-Path $nextCli)) {
@@ -57,6 +59,7 @@ function Register-AIModelWatchTask([string]$name, [string]$scriptPath, $trigger)
 Register-AIModelWatchTask "AI Model Watch - Backend" $backendScript $logon
 Register-AIModelWatchTask "AI Model Watch - Frontend" $frontendScript $logon
 Register-AIModelWatchTask "AI Model Watch - Weekly Pipeline" $weeklyScript $weekly
+Register-AIModelWatchTask "AI Model Watch - Daily Official" $dailyScript $daily
 Register-AIModelWatchTask "AI Model Watch - Control Panel" $panelScript $logon
 
 if ($StartNow) {

@@ -36,11 +36,14 @@ def _aware(value: datetime) -> datetime:
     return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
 
 
-def _collect(database: Database, settings: Settings) -> tuple[int, int, int]:
+def _collect(database: Database, settings: Settings, scope: str = 'all') -> tuple[int, int, int]:
     official_inserted = 0
     reddit_inserted = 0
     x_inserted = 0
-    sources = (*OFFICIAL_SOURCES, *REDDIT_SOURCES, *X_SOURCES) if settings.x_enabled else (*OFFICIAL_SOURCES, *REDDIT_SOURCES)
+    if scope == 'official':
+        sources = OFFICIAL_SOURCES
+    else:
+        sources = (*OFFICIAL_SOURCES, *REDDIT_SOURCES, *X_SOURCES) if settings.x_enabled else (*OFFICIAL_SOURCES, *REDDIT_SOURCES)
     for source in sources:
         database.upsert_source(source)
         try:
@@ -70,10 +73,10 @@ def _collect(database: Database, settings: Settings) -> tuple[int, int, int]:
     return official_inserted, reddit_inserted, x_inserted
 
 
-def run_weekly_pipeline(settings: Settings, limit: int = 100) -> PipelineSummary:
+def run_weekly_pipeline(settings: Settings, limit: int = 100, scope: str = 'all') -> PipelineSummary:
     database = Database(settings.database_path)
     database.initialize()
-    official_inserted, reddit_inserted, x_inserted = _collect(database, settings)
+    official_inserted, reddit_inserted, x_inserted = _collect(database, settings, scope)
     if settings.llm_provider == "openai-compatible":
         if not settings.llm_model:
             raise ValueError("AI_MODEL_WATCH_LLM_MODEL is required for openai-compatible provider")
