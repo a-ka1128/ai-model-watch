@@ -72,10 +72,10 @@ def test_recency_filter_skips_old_documents(tmp_path: Path):
     database.insert_document(Document('Test', 'Old', 'https://example.com/old', 'old body', published_at=now - timedelta(weeks=10)))
     database.insert_document(Document('Test', 'New', 'https://example.com/new', 'new body', published_at=now - timedelta(days=2)))
     database.insert_document(Document('Test', 'Undated', 'https://example.com/undated', 'undated body'))
-    settings = Settings(tmp_path / 'test.db', max_age_weeks=4)
+    settings = Settings(tmp_path / 'test.db', max_age_days=28)
     titles = lambda rows: {row['title'] for row in rows}
     assert titles(database.list_body_candidates(since=settings.since)) == {'New', 'Undated'}
-    assert titles(database.list_body_candidates(since=Settings(tmp_path / 'x.db', max_age_weeks=0).since)) == {'Old', 'New', 'Undated'}
+    assert titles(database.list_body_candidates(since=Settings(tmp_path / 'x.db', max_age_days=0).since)) == {'Old', 'New', 'Undated'}
     for doc in database.list_documents():
         database.update_article_body(int(doc['id']), 'body')
     assert titles(database.list_documents_for_curation(since=settings.since)) == {'New', 'Undated'}

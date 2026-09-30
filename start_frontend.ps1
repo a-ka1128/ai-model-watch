@@ -1,4 +1,5 @@
 $ErrorActionPreference = "Stop"
+$PSDefaultParameterValues["Out-File:Encoding"] = "utf8"; $PSDefaultParameterValues["Add-Content:Encoding"] = "utf8"
 $repo = Split-Path -Parent $MyInvocation.MyCommand.Path
 $frontend = Join-Path $repo "frontend"
 $storage = Join-Path $env:LOCALAPPDATA "AI_Model_Watch"

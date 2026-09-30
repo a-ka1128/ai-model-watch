@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime, timezone
 
 from .analysis import AnalysisSummary, analyze_documents
 from .clustering import ClusteringSummary, cluster_claims
@@ -31,6 +32,10 @@ class PipelineSummary:
     curation: CurationSummary
 
 
+def _aware(value: datetime) -> datetime:
+    return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+
+
 def _collect(database: Database, settings: Settings) -> tuple[int, int, int]:
     official_inserted = 0
     reddit_inserted = 0
@@ -52,6 +57,9 @@ def _collect(database: Database, settings: Settings) -> tuple[int, int, int]:
         except Exception:
             # One source must not prevent the weekly run from processing the rest.
             continue
+        if settings.since is not None:
+            cutoff = datetime.fromisoformat(settings.since)
+            documents = [d for d in documents if d.published_at is None or _aware(d.published_at) >= cutoff]
         inserted = sum(database.insert_document(document) for document in documents)
         if source.source_type == "reddit":
             reddit_inserted += inserted

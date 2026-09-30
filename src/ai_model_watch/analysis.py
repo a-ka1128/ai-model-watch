@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 
 from .database import Database
@@ -21,14 +22,23 @@ def analyze_documents(database: Database, analyzer: StructuredAnalyzer, limit: i
     for document in database.list_documents(limit):
         processed += 1
         content = document['article_content'] or document['content']
-        result = analyzer.classify(document["title"], content)
-        if not result.relevant:
+        try:
+            result = analyzer.classify(document["title"], content)
+            if not result.relevant:
+                continue
+            extracted = analyzer.extract(document["title"], content, document["source_type"])
+        except Exception as exc:
+            # One malformed model response must not abort the whole run.
+            logging.getLogger(__name__).warning("Analysis failed for document %s: %s", document["id"], exc)
             continue
         relevant += 1
-        for raw_claim in analyzer.extract(document["title"], content):
-            reliability = raw_claim.get("reliability", document["reliability_default"])
-            if not isinstance(reliability, int) or reliability not in (1, 2, 3):
-                reliability = int(document["reliability_default"])
+        for raw_claim in extracted:
+            # The source sets the ceiling: a model may lower trust (higher number) but never raise it.
+            default_reliability = int(document["reliability_default"])
+            reliability = raw_claim.get("reliability")
+            if isinstance(reliability, bool) or not isinstance(reliability, int) or reliability not in (1, 2, 3):
+                reliability = default_reliability
+            reliability = max(reliability, default_reliability)
             claim_text = str(raw_claim.get("claim_text", "")).strip()
             if not claim_text:
                 continue

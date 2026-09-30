@@ -50,7 +50,7 @@ class RelevanceFilter(Protocol):
 
 
 class ClaimExtractor(Protocol):
-    def extract(self, title: str, content: str) -> list[dict[str, object]]:
+    def extract(self, title: str, content: str, source_type: str = "") -> list[dict[str, object]]:
         """Return evidence-backed claim objects; never invent missing fields."""
 
 

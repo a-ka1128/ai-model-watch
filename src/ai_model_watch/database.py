@@ -197,7 +197,7 @@ class Database:
             return list(
                 connection.execute(
                     """
-                    SELECT d.*, s.company, s.reliability_default, s.name AS source_name
+                    SELECT d.*, s.company, s.reliability_default, s.source_type, s.name AS source_name
                     FROM documents d
                     JOIN sources s ON s.id = d.source_id
                     ORDER BY COALESCE(d.published_at, d.collected_at) DESC

@@ -13,7 +13,7 @@ class HeuristicAnalyzer:
     def classify(self, title: str, content: str) -> RelevanceResult:
         return self.relevance.classify(title, content)
 
-    def extract(self, title: str, content: str) -> list[dict[str, object]]:
+    def extract(self, title: str, content: str, source_type: str = "") -> list[dict[str, object]]:
         result = self.classify(title, content)
         if not result.relevant:
             return []

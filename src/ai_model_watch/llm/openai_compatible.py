@@ -63,6 +63,9 @@ def _extract_json(text: str) -> dict[str, Any]:
     return value
 
 
+COMMUNITY_SOURCE_TYPES = {'reddit', 'x'}
+
+
 class OpenAICompatibleProvider:
     """Adapter for Ollama, llama.cpp servers, vLLM, and similar endpoints."""
 
@@ -104,13 +107,26 @@ class OpenAICompatibleProvider:
             summary_ko=str(result.get("summary_ko", "")),
         )
 
-    def extract(self, title: str, content: str) -> list[dict[str, object]]:
+    def extract(self, title: str, content: str, source_type: str = "") -> list[dict[str, object]]:
         prompt = (
             "Extract only explicitly supported claims. Return JSON only with a claims array. "
             "Each claim must have company, product, model, topic, task, effort, claim_text, reliability. "
             "Reliability must be 1, 2, or 3; use 1 only for explicit official statements. "
             "Return an empty claims array when evidence is insufficient. Never invent numbers or names."
         )
+        if source_type in COMMUNITY_SOURCE_TYPES:
+            prompt = (
+                "The text is a community post (not an official statement). Extract the concrete, checkable "
+                "claims its author makes or reports about AI models, tools, settings, usage limits, "
+                "performance or behaviour, such as measured numbers, comparisons, recommended settings "
+                "and reproducible steps. Write each claim_text as a report attributed to the author "
+                "(for example 'The author reports that ...'), never as established fact. "
+                "Skip pure opinion, jokes, questions, and posts with nothing concrete. "
+                "Return at most 5 claims, each one short sentence, most important first. "
+                "Return JSON only with a claims array. Each claim must have company, product, model, topic, "
+                "task, effort, claim_text, reliability. Use reliability 3 for these claims. "
+                "Use null for any field the text does not state. Never invent numbers or names."
+            )
         result = _extract_json(self._complete(prompt, f"TITLE:\n{title}\n\nCONTENT:\n{content}"))
         claims = result.get("claims", [])
         return [claim for claim in claims if isinstance(claim, dict) and isinstance(claim.get("claim_text"), str)]
