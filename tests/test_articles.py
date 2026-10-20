@@ -122,3 +122,36 @@ def test_official_scope_skips_reddit_sources(tmp_path: Path):
          patch.object(pipeline, 'collect_html_index', side_effect=lambda source, settings: seen.append(source.name) or []):
         pipeline._collect(database, Settings(tmp_path / 'test.db'), 'official')
     assert seen and not any('Reddit' in name for name in seen)
+
+
+def test_blocked_official_page_falls_back_to_feed_teaser(tmp_path: Path):
+    import urllib.error
+    from ai_model_watch.collectors import article
+    database = Database(tmp_path / 'test.db')
+    database.initialize()
+    database.upsert_source(Source('Test', 'official', 'https://example.com', 1, 'Test', True))
+    teaser = 'Meet the new model: a one-sentence announcement that is long enough to be a usable teaser for readers.'
+    database.insert_document(Document('Test', 'New model', 'https://example.com/a', teaser))
+    def blocked(*args, **kwargs):
+        raise urllib.error.HTTPError('https://example.com/a', 403, 'Forbidden', {}, None)
+    with patch.object(article, 'fetch_article_body', side_effect=blocked):
+        summary = article.collect_article_bodies(database, Settings(tmp_path / 'test.db'))
+    assert (summary.collected, summary.failed) == (1, 0)
+    assert database.get_document(database.list_documents()[0]['id'])['article_content'] == teaser
+
+
+def test_html_index_keeps_model_launch_pages_and_parses_dates(tmp_path: Path):
+    from ai_model_watch.collectors.html_index import collect_html_index
+    html = ('<a href="/news/a">Sep 23, 2026ScienceA study</a>'
+            '<a href="/claude-sonnet-5-5">Introducing Claude Sonnet 5.5</a><a href="/careers">Careers</a>').encode()
+    class Response:
+        headers = type('H', (), {'get_content_charset': lambda self: 'utf-8'})()
+        def __enter__(self): return self
+        def __exit__(self, *args): pass
+        def read(self): return html
+    source = Source('Anthropic News', 'official', 'https://www.anthropic.com/news', 1, 'Anthropic', True, 'html_index')
+    with patch('urllib.request.urlopen', return_value=Response()):
+        documents = collect_html_index(source, Settings(tmp_path / 'test.db'))
+    assert [d.url for d in documents] == ['https://www.anthropic.com/news/a', 'https://www.anthropic.com/claude-sonnet-5-5']
+    assert documents[0].published_at.year == 2026 and documents[0].title.startswith('ScienceA')
+    assert documents[1].published_at is None

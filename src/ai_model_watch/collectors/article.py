@@ -154,6 +154,14 @@ def collect_article_bodies(database: Database, settings: Settings, limit: int = 
             collected += 1
             print(f"[body] id={document['id']} characters={len(body)}", flush=True)
         except Exception as exc:
+            if (isinstance(exc, urllib.error.HTTPError) and exc.code == 403
+                    and str(document['source_type']) == 'official' and len(feed_content) >= 80):
+                # Official sites that block scrapers (e.g. openai.com) still publish a feed teaser;
+                # keep the announcement visible with that teaser rather than dropping it.
+                database.update_article_body(int(document['id']), feed_content)
+                collected += 1
+                print(f"[body] id={document['id']} characters={len(feed_content)} teaser-only", flush=True)
+                continue
             if isinstance(exc, urllib.error.HTTPError) and exc.code == 429:
                 blocked_sources.add(str(document['source_type']))
             database.update_article_body(int(document['id']), None, str(exc))

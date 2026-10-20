@@ -1,12 +1,38 @@
 from __future__ import annotations
 
+import re
 import urllib.request
+from datetime import datetime, timezone
 from html.parser import HTMLParser
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlsplit
 
 from ..config import Settings
 from ..models import Document, Source
 
+
+_DATE_PREFIX = re.compile(r"^([A-Z][a-z]{2} \d{1,2}, \d{4})\s*")
+
+
+_DATE = r"[A-Z][a-z]{2} \d{1,2}, \d{4}"
+_DATE_PREFIX = re.compile(rf"^({_DATE})\s*")
+_FEATURED_CARD = re.compile(rf"^(.+?)(?:Announcements|Product|Research|Policy|Society|Interpretability|Alignment|Economic Research|Customer stories|Education)?({_DATE})")
+
+
+def _split_listing_date(title: str) -> tuple[str, datetime | None]:
+    """Anthropic's index renders 'Sep 23, 2026Science Title' (or 'TitleAnnouncementsSep 28, 2026Blurb') as one link text."""
+    featured = _FEATURED_CARD.match(title)
+    match = _DATE_PREFIX.match(title)
+    if match:
+        date_text, clean = match.group(1), title[match.end():].strip()
+    elif featured:
+        date_text, clean = featured.group(2), featured.group(1).strip()
+    else:
+        return title, None
+    try:
+        published = datetime.strptime(date_text, "%b %d, %Y").replace(tzinfo=timezone.utc)
+    except ValueError:
+        return title, None
+    return clean or title, published
 
 class _ArticleLinkParser(HTMLParser):
     """Small dependency-free parser for official news index pages."""
@@ -49,8 +75,11 @@ def collect_html_index(source: Source, settings: Settings) -> list[Document]:
     seen_urls: set[str] = set()
     for title, relative_url in parser.links:
         url = urljoin(source.url, relative_url)
-        if url in seen_urls or "/news/" not in url:
+        path = urlsplit(url).path
+        # Model launches such as /claude-sonnet-5-5 live outside /news/.
+        if url in seen_urls or not (path.startswith("/news/") or path.startswith("/claude-")):
             continue
         seen_urls.add(url)
-        documents.append(Document(source_name=source.name, title=title, url=url, content=title))
+        title, published_at = _split_listing_date(title)
+        documents.append(Document(source_name=source.name, title=title, url=url, content=title, published_at=published_at))
     return documents

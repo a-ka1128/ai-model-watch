@@ -110,7 +110,7 @@ Run once from PowerShell:
 .\setup_windows_autostart.ps1 -StartNow
 ```
 
-This registers user-level tasks for the API, production dashboard, Control Panel, and Monday weekly pipeline. The dashboard is available at `http://127.0.0.1:3000` while the computer is on. To remove the tasks:
+This registers user-level tasks for the API, production dashboard, Control Panel, and the daily collection pipeline (06:00). The dashboard is available at `http://127.0.0.1:3000` while the computer is on. To remove the tasks:
 
 ```powershell
 .\stop_windows_autostart.ps1

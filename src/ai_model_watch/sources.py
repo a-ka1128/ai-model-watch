@@ -31,6 +31,23 @@ OFFICIAL_SOURCES: tuple[Source, ...] = (
         company="Google",
         is_official=True,
     ),
+    # Gemini model launches are posted here and on DeepMind, not under the general AI feed.
+    Source(
+        name="Google Gemini Blog",
+        source_type="official",
+        url="https://blog.google/products/gemini/rss/",
+        reliability_default=1,
+        company="Google",
+        is_official=True,
+    ),
+    Source(
+        name="Google DeepMind Blog",
+        source_type="official",
+        url="https://deepmind.google/blog/rss.xml",
+        reliability_default=1,
+        company="Google",
+        is_official=True,
+    ),
 )
 
 

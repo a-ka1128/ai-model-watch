@@ -11,12 +11,12 @@ $env:AI_MODEL_WATCH_DB = Join-Path $storage "ai_model_watch.db"
 $env:UV_CACHE_DIR = Join-Path $storage "uv-cache"
 New-Item -ItemType Directory -Force $env:UV_CACHE_DIR | Out-Null
 
-"[$(Get-Date -Format o)] Starting official-site collection" | Add-Content $logPath
+"[$(Get-Date -Format o)] Starting daily collection" | Add-Content $logPath
 try {
     if (Get-Command uv -ErrorAction SilentlyContinue) {
-        uv run --project . python -m ai_model_watch run-weekly --scope official --limit 100 *>> $logPath
+        uv run --project . python -m ai_model_watch run-weekly --limit 100 *>> $logPath
     } elseif (Get-Command python -ErrorAction SilentlyContinue) {
-        python -m ai_model_watch run-weekly --scope official --limit 100 *>> $logPath
+        python -m ai_model_watch run-weekly --limit 100 *>> $logPath
     } else {
         throw "Python or uv is required to run the daily pipeline."
     }
@@ -24,5 +24,5 @@ try {
     "[$(Get-Date -Format o)] ERROR: $($_.Exception.Message)" | Add-Content $logPath
     throw
 } finally {
-    "[$(Get-Date -Format o)] Official-site collection finished" | Add-Content $logPath
+    "[$(Get-Date -Format o)] Daily collection finished" | Add-Content $logPath
 }

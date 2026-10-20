@@ -30,7 +30,8 @@ def curate_documents(database: Database, curator: ArticleCurator, limit: int = 1
                 str(document['source_name']),
                 int(document['reliability_default']),
             )
-            status = 'selected' if assessment.score >= MINIMUM_QUALITY_SCORE else 'rejected'
+            official = document['source_type'] == 'official'  # vendor announcements are primary sources; never drop them as thin
+            status = 'selected' if official or assessment.score >= MINIMUM_QUALITY_SCORE else 'rejected'
             database.update_document_curation(document_id, status, assessment.score, assessment.reason)
             if status == 'selected':
                 selected += 1

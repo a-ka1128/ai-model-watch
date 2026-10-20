@@ -39,7 +39,6 @@ if (-not $SkipInstall) {
 $settings = New-ScheduledTaskSettingsSet -Hidden -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1)
 $principal = New-ScheduledTaskPrincipal -UserId $userId -LogonType Interactive -RunLevel Limited
 $logon = New-ScheduledTaskTrigger -AtLogOn -User $userId
-$weekly = New-ScheduledTaskTrigger -Weekly -DaysOfWeek Monday -At 9:00AM
 $daily = New-ScheduledTaskTrigger -Daily -At 6:00AM
 
 function Register-AIModelWatchTask([string]$name, [string]$scriptPath, $trigger) {
@@ -58,8 +57,11 @@ function Register-AIModelWatchTask([string]$name, [string]$scriptPath, $trigger)
 
 Register-AIModelWatchTask "AI Model Watch - Backend" $backendScript $logon
 Register-AIModelWatchTask "AI Model Watch - Frontend" $frontendScript $logon
-Register-AIModelWatchTask "AI Model Watch - Weekly Pipeline" $weeklyScript $weekly
-Register-AIModelWatchTask "AI Model Watch - Daily Official" $dailyScript $daily
+# Official sites and Reddit are both collected daily; drop the superseded tasks.
+foreach ($old in "AI Model Watch - Weekly Pipeline", "AI Model Watch - Daily Official") {
+    Unregister-ScheduledTask -TaskName $old -Confirm:$false -ErrorAction SilentlyContinue
+}
+Register-AIModelWatchTask "AI Model Watch - Daily Pipeline" $dailyScript $daily
 Register-AIModelWatchTask "AI Model Watch - Control Panel" $panelScript $logon
 
 if ($StartNow) {
