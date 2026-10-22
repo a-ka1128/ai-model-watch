@@ -154,7 +154,7 @@ uv run python -m ai_model_watch translate --limit 30
 
 전체 화면은 크림색 바탕·흰 카드·녹색 포인트의 밝은 테마를 사용합니다.
 번역 모델은 분석 모델과 별도로 `AI_MODEL_WATCH_TRANSLATION_MODEL`로 지정할 수 있으며,
-현재 설정은 로컬 `qwen3:14b`입니다. 추가 다운로드나 유료 외부 API는 사용하지 않습니다.
+현재 설정은 로컬 `hf.co/unsloth/Qwen3.8-27B-GGUF:UD-IQ4_XS`입니다(2026-10, `qwen3:14b`에서 교체). 이 PC에서는 GPU에 다 올라가지 않아 느리니, 빠르게 돌리려면 `qwen3:8b`로 바꾸세요. 모든 LLM 호출은 `reasoning_effort: "none"`으로 thinking을 끕니다. 추가 다운로드나 유료 외부 API는 사용하지 않습니다.
 
 번역은 초안 생성 후 원문과 대조하는 교정을 거칩니다. 제품명·URL은 보호하고,
 깨진 혼합 문자나 제품명 누락을 발견하면 새 결과 저장을 중단합니다.

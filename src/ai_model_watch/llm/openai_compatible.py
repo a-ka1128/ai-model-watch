@@ -80,6 +80,8 @@ class OpenAICompatibleProvider:
         payload = json.dumps({
             "model": self.model,
             "temperature": 0,
+            # Reasoning models (qwen3, Qwen3.6+) would think before every JSON answer; none is needed here.
+            "reasoning_effort": "none",
             "response_format": {'type': 'json_schema', 'json_schema': {'name': 'article', 'schema': schema, 'strict': True}} if schema else {"type": "json_object"},
             "messages": [
                 {"role": "system", "content": system},
